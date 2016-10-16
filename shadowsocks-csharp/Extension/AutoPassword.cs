@@ -61,8 +61,14 @@ namespace Shadowsocks.Extension
             if (shouldUpdate)
             {
                 Configuration.Save(config);
+                Logging.Info("密码改变，更新成功");
                 // 将会重新载入配置文件
                 _controller.Start();
+               
+            }
+            else
+            {
+                Logging.Info("密码未变，无需更新");
             }
         }
 
@@ -72,7 +78,7 @@ namespace Shadowsocks.Extension
             Regex usa = new Regex(@"<h4>A密码:(?<Password>\d+)</h4>");
             Regex hka = new Regex(@"<h4>B密码:(?<Password>\d+)</h4>");
             Regex jpa = new Regex(@"<h4>C密码:(?<Password>\d+)</h4>");
-            WebRequest request = HttpWebRequest.Create("http://www.ishadowsocks.org/");
+            WebRequest request = HttpWebRequest.Create("http://www.ishadowsocks.org/?timestamp=" + DateTime.Now.Ticks);
             WebResponse response = null;
             try
             {
