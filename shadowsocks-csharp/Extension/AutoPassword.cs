@@ -27,15 +27,17 @@ namespace Shadowsocks.Extension
             Logging.Info("开启 ishadowsocks 监听");
         }
 
+        static void DoUpdate(string msg)
+        {
+            Logging.Info(msg);
+            UpdateConfig();
+        }
+
         static void PasswordCheck(object obj)
         {
             if (DateTime.Now.Minute == 1)
             {
-                Logging.Info("整点更新密码");
-                UpdateConfig();
-                Logging.Info("更新密码成功");
-                // 将会重新载入配置文件
-                _controller.Start();
+                DoUpdate("整点更新密码");
             }
             _timer.Change(1000 * 20, Timeout.Infinite);  // 20s 检查一次，当为整点时，去读取服务器端更新的密码
         }
@@ -44,16 +46,24 @@ namespace Shadowsocks.Extension
         {
             var config = Configuration.Load();
             var passwords = GetPassword();
-
+            bool shouldUpdate = false;
             foreach (var serverInfo in config.configs)
             {
                 if (passwords.ContainsKey(serverInfo.server))
                 {
-                    serverInfo.password = passwords[serverInfo.server];
+                    if (serverInfo.password != passwords[serverInfo.server])
+                    {
+                        shouldUpdate = true;
+                        serverInfo.password = passwords[serverInfo.server];
+                    }
                 }
             }
-
-            Configuration.Save(config);
+            if (shouldUpdate)
+            {
+                Configuration.Save(config);
+                // 将会重新载入配置文件
+                _controller.Start();
+            }
         }
 
         static Dictionary<String, String> GetPassword()
@@ -112,6 +122,7 @@ namespace Shadowsocks.Extension
         internal static void Register(ShadowsocksController controller)
         {
             _controller = controller;
+            DoUpdate("初始密码检测");
         }
     }
 }
