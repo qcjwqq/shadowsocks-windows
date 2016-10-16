@@ -35,11 +35,11 @@ namespace Shadowsocks.Extension
 
         static void PasswordCheck(object obj)
         {
-            if (DateTime.Now.Minute == 1)
+            if (DateTime.Now.Minute == 0)
             {
                 DoUpdate("整点更新密码");
             }
-            _timer.Change(1000 * 20, Timeout.Infinite);  // 20s 检查一次，当为整点时，去读取服务器端更新的密码
+            _timer.Change(1000 * 40, Timeout.Infinite);  // 30s 检查一次，当为整点时，去读取服务器端更新的密码
         }
 
         static void UpdateConfig()
@@ -64,7 +64,7 @@ namespace Shadowsocks.Extension
                 Logging.Info("密码改变，更新成功");
                 // 将会重新载入配置文件
                 _controller.Start();
-               
+
             }
             else
             {
