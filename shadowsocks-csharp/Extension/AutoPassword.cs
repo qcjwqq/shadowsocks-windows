@@ -35,7 +35,7 @@ namespace Shadowsocks.Extension
 
         static void PasswordCheck(object obj)
         {
-            if (DateTime.Now.Minute == 0)
+            if (DateTime.Now.Minute == 0 || DateTime.Now.Minute == 1 || DateTime.Now.Minute == 2 || DateTime.Now.Minute == 3)
             {
                 DoUpdate("整点更新密码");
             }
