@@ -60,11 +60,11 @@ namespace Shadowsocks.Extension
             }
             if (shouldUpdate)
             {
+                _controller.Stop();
                 Configuration.Save(config);
                 Logging.Info("密码改变，更新成功");
                 // 将会重新载入配置文件
                 _controller.Start();
-
             }
             else
             {
