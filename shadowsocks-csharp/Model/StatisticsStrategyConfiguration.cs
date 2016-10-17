@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 
-using Newtonsoft.Json;
 
 using Shadowsocks.Controller;
+using Newtonsoft.Json;
 
 namespace Shadowsocks.Model
 {

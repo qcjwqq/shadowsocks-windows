@@ -4,11 +4,11 @@ using System.IO;
 using System.Net;
 using System.Text;
 
-using Newtonsoft.Json;
 
 using Shadowsocks.Model;
 using Shadowsocks.Properties;
 using Shadowsocks.Util;
+using Newtonsoft.Json;
 
 namespace Shadowsocks.Controller
 {

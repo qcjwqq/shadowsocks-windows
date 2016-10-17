@@ -4,12 +4,12 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 
-using Newtonsoft.Json;
 
 using Shadowsocks.Model;
 
 namespace Shadowsocks.Controller.Strategy
 {
+    using Newtonsoft.Json;
     using Statistics = Dictionary<string, List<StatisticsRecord>>;
 
     internal class StatisticsStrategy : IStrategy, IDisposable
