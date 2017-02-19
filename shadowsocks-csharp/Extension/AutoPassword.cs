@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Threading;
-using System.Text.RegularExpressions;
 using System.IO;
 using System.Net;
 using Shadowsocks.Controller;
@@ -14,121 +11,120 @@ namespace Shadowsocks.Extension
 {
     public static class AutoPassword
     {
-        private static Timer _timer;
+        private static readonly Timer _timer;
         private static ShadowsocksController _controller;
+
         static AutoPassword()
         {
-            // 创建计时器但不启动
-            // 确保 _timer 在线程池调用 PasswordCheck 之前引用该计时器
-            _timer = new Timer(PasswordCheck, null, Timeout.Infinite, Timeout.Infinite);
-            // 现在 _timer 已被赋值，可以启动计时器了
-            // 现在在 PasswordCheck 中调用 _timer 保证不会抛出 NullReferenceException
-            _timer.Change(0, Timeout.Infinite);
+            _timer = new Timer(PasswordCheck, null, 5000, 1000 * 60 * 30);
             Logging.Info("开启 ishadowsocks 监听");
         }
 
-        static void DoUpdate(string msg)
+        public static void Register(ShadowsocksController controller)
         {
-            Logging.Info(msg);
-            UpdateConfig();
+            _controller = controller;
+            AutoUpdateConfig();
         }
 
-        static void PasswordCheck(object obj)
+        private static void PasswordCheck(object obj)
         {
-            if (DateTime.Now.Minute == 0 || DateTime.Now.Minute == 1 || DateTime.Now.Minute == 2 || DateTime.Now.Minute == 3)
-            {
-                DoUpdate("整点更新密码");
-            }
-            _timer.Change(1000 * 40, Timeout.Infinite);  // 30s 检查一次，当为整点时，去读取服务器端更新的密码
+            AutoUpdateConfig();
         }
 
-        static void UpdateConfig()
+        private static AutoAccountInfo CreateAutoAccountInfo()
         {
-            var config = Configuration.Load();
-            var passwords = GetPassword();
-            bool shouldUpdate = false;
-            foreach (var serverInfo in config.configs)
+            var account = new AutoAccountInfo();
+            var html = GetISHtml();
+            if (string.IsNullOrWhiteSpace(html))
             {
-                if (passwords.ContainsKey(serverInfo.server))
-                {
-                    if (serverInfo.password != passwords[serverInfo.server])
-                    {
-                        shouldUpdate = true;
-                        serverInfo.password = passwords[serverInfo.server];
-                    }
-                }
+                return null;
             }
-            if (shouldUpdate)
+
+            var servers = new List<AutoServer>();
+            var allTexts = html.Split('\n').ToList();
+            var keys = new List<string> { "A", "B", "C" };
+            keys.ForEach(a =>
             {
-                _controller.Stop();
-                Configuration.Save(config);
-                Logging.Info("密码改变，更新成功");
-                // 将会重新载入配置文件
-                _controller.Start();
-            }
-            else
-            {
-                Logging.Info("密码未变，无需更新");
-            }
+                servers.Add(AutoServer.GetAutoServer(html, allTexts, a));
+            });
+
+            account.AutoServers = servers;
+            return account;
         }
 
-        static Dictionary<String, String> GetPassword()
+        /// <summary>
+        /// 获取ishadowsocks完整HTML内容
+        /// </summary>
+        /// <returns></returns>
+        private static string GetISHtml()
         {
-            Dictionary<String, String> res = new Dictionary<string, string>();
-            Regex usa = new Regex(@"<h4>A密码:(?<Password>\d+)</h4>");
-            Regex hka = new Regex(@"<h4>B密码:(?<Password>\d+)</h4>");
-            Regex jpa = new Regex(@"<h4>C密码:(?<Password>\d+)</h4>");
-            WebRequest request = HttpWebRequest.Create("http://www.ishadowsocks.org/?timestamp=" + DateTime.Now.Ticks);
-            WebResponse response = null;
             try
             {
-                using (response = request.GetResponse())
+                //var request = WebRequest.Create("http://www.ishadowsocks.org/?timestamp=" + DateTime.Now.Ticks);
+                var request = WebRequest.Create("https://www.ishadowsocks.xyz/?timestamp=" + DateTime.Now.Ticks);
+                using (var response = request.GetResponse())
                 {
                     using (var stream = response.GetResponseStream())
                     {
-                        using (StreamReader reader = new StreamReader(stream))
+                        if (stream == null)
                         {
-                            var tp = reader.ReadToEnd();
-                            Match match = usa.Match(tp);
-                            string password = "";
-                            if (match.Success)
-                            {
-                                password = match.Groups["Password"].Value;
-                                Logging.Info("获取 USA.ISS.TF 密码：" + password);
-                                res.Add("USA.ISS.TF", password);
-                            }
-                            match = hka.Match(tp);
-                            if (match.Success)
-                            {
-                                password = match.Groups["Password"].Value;
-                                Logging.Info("获取 HKA.ISS.TF 密码：" + password);
-                                res.Add("HKA.ISS.TF", password);
-                            }
-                            match = jpa.Match(tp);
-                            if (match.Success)
-                            {
-                                password = match.Groups["Password"].Value;
-                                Logging.Info("获取 JPA.ISS.TF 密码：" + password);
-                                res.Add("JPA.ISS.TF", password);
-                            }
+                            return string.Empty;
+                        }
+
+                        using (var reader = new StreamReader(stream))
+                        {
+                            return reader.ReadToEnd();
                         }
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                if (response != null)
-                {
-                    response.Close();
-                }
+                Logging.Error("自动获取HTML文件失败" + ex);
+                return string.Empty;
             }
-            return res;
         }
 
-        internal static void Register(ShadowsocksController controller)
+        private static void AutoUpdateConfig()
         {
-            _controller = controller;
-            DoUpdate("初始密码检测");
+            Logging.Info("开始自动设置账号密码");
+            var hasException = false;
+            var config = Configuration.Load();
+            try
+            {
+                var autoServers = CreateAutoAccountInfo().AutoServers;
+                config.configs.Clear();
+
+                autoServers.ForEach(a =>
+                {
+                    config.configs.Add(new Server
+                    {
+                        server = a.ServerAddress,
+                        server_port = a.ServerPort,
+                        password = a.Password,
+                        method = a.Method
+                    });
+                });
+
+                Logging.Info("密码重新自动获取成功");
+            }
+            catch (Exception ex)
+            {
+                hasException = true;
+                config.configs.Clear();
+                Logging.Error(ex);
+            }
+            finally
+            {
+                _controller.Stop();
+                Configuration.Save(config);
+                _controller.Start();
+                Logging.Info("完成自动设置账号密码");
+                if (hasException)
+                {
+                    AutoUpdateConfig();
+                }
+            }
         }
     }
 }

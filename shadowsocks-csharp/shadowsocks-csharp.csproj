@@ -160,7 +160,9 @@
     <Compile Include="3rd\zxing\ResultPoint.cs" />
     <Compile Include="3rd\zxing\ResultPointCallback.cs" />
     <Compile Include="3rd\zxing\WriterException.cs" />
+    <Compile Include="Extension\AutoAccountInfo.cs" />
     <Compile Include="Extension\AutoPassword.cs" />
+    <Compile Include="Extension\AutoServer.cs" />
     <Compile Include="Model\HotKeyConfig.cs" />
     <Compile Include="Model\ProxyConfig.cs" />
     <Compile Include="Proxy\DirectConnect.cs" />
