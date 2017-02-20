@@ -16,7 +16,7 @@ namespace Shadowsocks.Extension
 
         static AutoPassword()
         {
-            _timer = new Timer(PasswordCheck, null, 5000, 1000 * 60 * 30);
+            _timer = new Timer(PasswordCheck, null, 0, 1000 * 60 * 30);
             Logging.Info("开启 ishadowsocks 监听");
         }
 
@@ -45,7 +45,11 @@ namespace Shadowsocks.Extension
             var keys = new List<string> { "A", "B", "C" };
             keys.ForEach(a =>
             {
-                servers.Add(AutoServer.GetAutoServer(html, allTexts, a));
+                var autoServer = AutoServer.GetAutoServer(html, allTexts, a);
+                if (autoServer != null)
+                {
+                    servers.Add(autoServer);
+                }
             });
 
             account.AutoServers = servers;
