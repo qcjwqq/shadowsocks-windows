@@ -7,8 +7,6 @@ namespace Shadowsocks.Extension
     {
         public string AllHtml { get; set; }
 
-        public string AccountArea { get; set; }
-
         public List<AutoServer> AutoServers { get; set; }
     }
 }

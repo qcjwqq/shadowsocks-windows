@@ -13,9 +13,17 @@ namespace Shadowsocks.Extension
     {
         private static readonly Timer _timer;
         private static ShadowsocksController _controller;
+        private static readonly List<string> IShadowsocks;
+        private static volatile int CurrendIndex;
 
         static AutoPassword()
         {
+            IShadowsocks = new List<string>
+            {
+                "http://www.ishadowsocks.org",
+                "https://www.ishadowsocks.xyz",
+                "https://ishadow.co/"
+            };
             _timer = new Timer(PasswordCheck, null, 0, 1000 * 60 * 30);
             Logging.Info("开启 ishadowsocks 监听");
         }
@@ -64,8 +72,8 @@ namespace Shadowsocks.Extension
         {
             try
             {
-                //var request = WebRequest.Create("http://www.ishadowsocks.org/?timestamp=" + DateTime.Now.Ticks);
-                var request = WebRequest.Create("https://www.ishadowsocks.xyz/?timestamp=" + DateTime.Now.Ticks);
+                var uri = string.Format("{0}?timestamp={1}", IShadowsocks[CurrendIndex], DateTime.Now.Ticks);
+                var request = WebRequest.Create(uri);
                 using (var response = request.GetResponse())
                 {
                     using (var stream = response.GetResponseStream())
@@ -84,6 +92,14 @@ namespace Shadowsocks.Extension
             }
             catch (Exception ex)
             {
+                if (CurrendIndex == Int32.MaxValue)
+                {
+                    CurrendIndex = 0;
+                    Logging.Info("CurrendIndex已重置为0");
+                }
+
+                CurrendIndex = CurrendIndex++ % IShadowsocks.Count;
+                Logging.Info("CurrendIndex为" + CurrendIndex);
                 Logging.Error("自动获取HTML文件失败" + ex);
                 return string.Empty;
             }
