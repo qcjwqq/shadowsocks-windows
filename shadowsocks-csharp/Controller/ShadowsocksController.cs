@@ -479,7 +479,7 @@ namespace Shadowsocks.Controller
                     }
                 }
                 Logging.LogUsefulException(e);
-                ReportError(e);
+                //ReportError(e);
             }
 
             if (ConfigChanged != null)
